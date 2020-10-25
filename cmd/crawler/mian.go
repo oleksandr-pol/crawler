@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -9,17 +10,23 @@ import (
 	"golang.org/x/net/html"
 )
 
-type Result struct {
-	url   string
-	value []byte
-}
-
 func main() {
+	res, err := crawl("http://localhost:8000/materials")
+	if err != nil {
+		fmt.Print(err.Error())
+	}
 
+	for _, url := range res {
+		urls, err := crawl(url)
+		if err != nil {
+			fmt.Print(err.Error())
+		}
+		fmt.Println(urls)
+	}
 }
 
-func crawl(url string) ([]Result, error) {
-	res, err := http.Get("localhost:8000/materials")
+func crawl(url string) ([]string, error) {
+	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -29,33 +36,33 @@ func crawl(url string) ([]Result, error) {
 		return nil, errors.New("failed to fetch data")
 	}
 
-	if res.Header.Get("Content-Type") != "text/html; charset=utf-8" {
+	notHtml := strings.Index(res.Header.Get("Content-Type"), "text/html") != 0
+	if notHtml {
 		return nil, errors.New("endpoint does not return html")
 	}
 
-	urls := getLinks(res.Body)
-
+	return getLinks(res.Body), nil
 }
 
 func getLinks(b io.Reader) []string {
 	var res []string
-	tokenizer := html.NewTokenizer(body)
+	tokenizer := html.NewTokenizer(b)
 
 	for {
-		token := tokenizer.Next()
+		tokenType := tokenizer.Next()
 
 		switch {
-		case token == html.ErrorToken:
+		case tokenType == html.ErrorToken:
 			return res
-		case token == html.StartTagToken:
-			t := token.Token()
+		case tokenType == html.StartTagToken:
+			token := tokenizer.Token()
 
-			isAnchor := t.Data == "a"
+			isAnchor := token.Data == "a"
 			if !isAnchor {
 				continue
 			}
 
-			ok, url := getHref(t)
+			ok, url := getHref(token)
 			if !ok {
 				continue
 			}
