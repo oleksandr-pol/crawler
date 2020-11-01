@@ -1,11 +1,10 @@
 package crawler
 
 import (
-	"os"
 	"sync"
 )
 
-func genUrlsChanStage(done <-chan os.Signal, urls []string) <-chan string {
+func genUrlsChanStage(done <-chan struct{}, urls []string) <-chan string {
 	out := make(chan string)
 	go func() {
 		for _, url := range urls {
@@ -21,7 +20,7 @@ func genUrlsChanStage(done <-chan os.Signal, urls []string) <-chan string {
 	return out
 }
 
-func crawlStage(done <-chan os.Signal, in <-chan string) <-chan Result {
+func crawlStage(done <-chan struct{}, in <-chan string) <-chan Result {
 	var wg sync.WaitGroup
 	out := make(chan Result)
 
@@ -68,7 +67,7 @@ func resultStage(in <-chan Result) map[string][]string {
 	return allResults
 }
 
-func CrawlPipe(done <-chan os.Signal, urls []string) map[string][]string {
+func CrawlPipe(done <-chan struct{}, urls []string) map[string][]string {
 	urlChan := genUrlsChanStage(done, urls)
 	outChan := crawlStage(done, urlChan)
 	result := resultStage(outChan)
