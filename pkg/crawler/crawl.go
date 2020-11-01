@@ -10,6 +10,7 @@ import (
 type Result struct {
 	Url   string
 	Links []string
+	Error error
 }
 
 func Crawl(url string) ([]string, error) {

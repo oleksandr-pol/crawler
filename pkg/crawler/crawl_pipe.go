@@ -1,43 +1,59 @@
 package crawler
 
-import "os"
+import (
+	"os"
+	"sync"
+)
 
 func genUrlsChanStage(done <-chan os.Signal, urls []string) <-chan string {
 	out := make(chan string)
 	go func() {
-		defer close(out)
 		for _, url := range urls {
-
 			select {
 			case out <- url:
 			case <-done:
 				return
 			}
 		}
+		close(out)
 	}()
+
 	return out
 }
 
 func crawlStage(done <-chan os.Signal, in <-chan string) <-chan Result {
+	var wg sync.WaitGroup
 	out := make(chan Result)
-	go func() {
-		defer close(out)
-		for url := range in {
-			links, err := Crawl(url)
 
+	for url := range in {
+		go func(curUrl string) {
+			wg.Add(1)
+			var res Result
+			links, err := Crawl(curUrl)
 			if err != nil {
-				return
+				res = Result{
+					Url:   curUrl,
+					Error: err,
+				}
+			}
+
+			res = Result{
+				Url:   curUrl,
+				Links: links,
 			}
 
 			select {
-			case out <- Result{
-				Url:   url,
-				Links: links,
-			}:
+			case out <- res:
 			case <-done:
 				return
 			}
-		}
+			wg.Done()
+		}(url)
+	}
+
+	go func() {
+		wg.Wait()
+		close(out)
 	}()
 	return out
 }
