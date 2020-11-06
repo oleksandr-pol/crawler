@@ -7,7 +7,10 @@ import (
 	"golang.org/x/net/html"
 )
 
-func GetLinks(b io.Reader) []string {
+// Links parses links from reader.
+// It accepts io.Reader as argument.
+// It return slice of links, type slice of string.
+func Links(b io.Reader) []string { // getters does not need get as prefix
 	var res []string
 	tokenizer := html.NewTokenizer(b)
 
@@ -25,7 +28,7 @@ func GetLinks(b io.Reader) []string {
 				continue
 			}
 
-			ok, url := GetHref(token)
+			ok, url := Href(token)
 			if !ok {
 				continue
 			}

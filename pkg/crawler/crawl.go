@@ -1,3 +1,7 @@
+/*
+	package crawler implements a simple library to concurrently crawl
+	HTML pages
+*/
 package crawler
 
 import (
@@ -13,6 +17,10 @@ type Result struct {
 	Error error
 }
 
+// Crawl fetch HTML pages by endpoints and parse links from fetched page
+// It accepts url as parameter, type string.
+// It returns urls slice of type string.
+// It return error fetched page is not of type HTML
 func Crawl(url string) ([]string, error) {
 	res, err := http.Get(url)
 	if err != nil {
@@ -29,17 +37,32 @@ func Crawl(url string) ([]string, error) {
 		return nil, errors.New("endpoint does not return html")
 	}
 
-	return GetLinks(res.Body), nil
+	return Links(res.Body), nil
 }
 
+// CrawlConcurrent crawl page by url and writes result to a channel.
+// It excepts url as parameter, type string.
+// It excepts channel as secont parameter, type Result channel.
 func CrawlConcurrent(url string, res chan Result) {
-	links, _ := Crawl(url)
-	res <- Result{
-		Url:   url,
-		Links: links,
+	// need to handle error, no blank identifier for errors
+	links, err := Crawl(url)
+	if err != nil {
+		res <- Result{
+			Url:   url,
+			Error: err,
+		}
+	} else {
+		res <- Result{
+			Url:   url,
+			Links: links,
+		}
 	}
 }
 
+// CrawlUrls concurrently fetch pages, crawl them and resturns results map.
+// It excepts urls slice as first param, type string slice.
+// It returns results map. Map key is a url which is crawled, type string.
+// Results map values are urls crawled from page. Type string slice.
 func CrawlUrls(urls []string) map[string][]string {
 	var wg = new(sync.WaitGroup)
 	var allResults = make(map[string][]string)

@@ -67,6 +67,11 @@ func resultStage(in <-chan Result) map[string][]string {
 	return allResults
 }
 
+// CrawlPipe creates pipe to crawl urls concurrently.
+// It accepts done channel as first argument.
+// It accepts urls  as second array, type strings slice.
+// It returns results map. Map key is a url which is crawled, type string.
+// Results map values are urls crawled from page. Type string slice.
 func CrawlPipe(done <-chan struct{}, urls []string) map[string][]string {
 	urlChan := genUrlsChanStage(done, urls)
 	outChan := crawlStage(done, urlChan)
